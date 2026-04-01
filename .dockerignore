@@ -1,0 +1,6 @@
+node_modules
+npm-debug.log
+.git
+.env
+my_final_document.pdf
+output-option1.pdf
