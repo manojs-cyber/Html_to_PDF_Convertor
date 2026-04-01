@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 
 async function testJsonPayload() {
   // Option 1: The JSON payload where "html" contains our string

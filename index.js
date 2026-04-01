@@ -59,7 +59,7 @@ app.post('/api/generate-pdf', async (req, res) => {
 
   } catch (error) {
     console.error('Error generating PDF:', error);
-    res.status(500).json({ error: 'An error occurred while generating the PDF.' });
+    res.status(500).json({ error: 'Failed to generate PDF from the provided HTML.', details: error.message });
   } finally {
     // 6. Always close the browser to prevent memory leaks
     if (browser) {

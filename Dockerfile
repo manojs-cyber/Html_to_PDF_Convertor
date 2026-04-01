@@ -1,10 +1,7 @@
 # Use the official Puppeteer image which includes Chromium and all required dependencies
 FROM ghcr.io/puppeteer/puppeteer:latest
 
-# We don't need to install Chromium because it's already in the image, 
-# so we can skip the standard Puppeteer Chromium download during npm install.
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+# Use the default Puppeteer configuration for the official image
 
 # Set the working directory inside the container
 WORKDIR /usr/src/app
