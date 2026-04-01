@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "API to convert HTML to PDF",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },

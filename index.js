@@ -1,87 +1,74 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
+import express from 'express';
+import puppeteer from 'puppeteer';
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-// Middleware configuration
-// Increase the payload size limit up to 50mb for large HTML strings
-app.use(express.json({ limit: '50mb' }));
-// Add support for receiving raw text/html requests directly
-app.use(express.text({ type: 'text/html', limit: '50mb' }));
+// Middleware to parse incoming plain text or HTML requests
+app.use(express.text({ type: ['text/html', 'text/plain'], limit: '10mb' }));
+// Middleware to parse JSON (if you decide to send data as a JSON object)
+app.use(express.json({ limit: '10mb' }));
 
+/**
+ * POST /api/pdf
+ * Accepts HTML string in the request body and returns a PDF file.
+ */
 app.post('/api/generate-pdf', async (req, res) => {
-  let htmlContent = '';
+  // Extract the HTML content from the request body
+  let htmlString = '';
 
-  // Extract HTML content based on the request type
-  if (req.is('text/html')) {
-    htmlContent = req.body;
-  } else if (req.is('application/json')) {
-    htmlContent = req.body.html;
-  } else {
-    return res.status(400).json({ 
-      error: 'Unsupported content type. Please send application/json with an "html" field, or plain text/html body.' 
-    });
+  if (typeof req.body === 'string') {
+    htmlString = req.body; // If sent as raw text/html
+  } else if (req.body && req.body.html) {
+    htmlString = req.body.html; // If sent as JSON: { "html": "<h1>...</h1>" }
   }
 
-  // Check if content exists
-  if (!htmlContent || typeof htmlContent !== 'string') {
-    return res.status(400).json({ error: 'HTML content missing or invalid.' });
+  // Validate that we actually received HTML
+  if (!htmlString || htmlString.trim() === '') {
+    return res.status(400).json({ error: 'No HTML content provided in the request body.' });
   }
 
   let browser;
   try {
-    // Launching a headless Chrome/Chromium instance natively
+    // 1. Launch Puppeteer
     browser = await puppeteer.launch({
-      headless: true, // Defaults to 'new' internally
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null, // Needed for Docker optimization
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      headless: 'new',
+      // Optional args to make it run smoother on certain servers
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
 
-    // Render HTML onto the page and wait for resources to finish downloading
-    await page.setContent(htmlContent, {
-      waitUntil: ['load', 'networkidle0']
-    });
+    // 2. Set the HTML content
+    await page.setContent(htmlString, { waitUntil: 'networkidle0' });
 
-    // Convert page to PDF
+    // 3. Generate the PDF Buffer
     const pdfBuffer = await page.pdf({
-      format: 'A4', // Standard paper size
-      printBackground: true, // Ensures CSS backgrounds are included
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      }
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
     });
 
-    // Set headers specifying a PDF response (can be downloaded directly or previewed in browser)
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': 'attachment; filename="document.pdf"',
-      'Content-Length': pdfBuffer.length
-    });
+    // 4. Set the proper headers to send a file back to the client
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="generated-document.pdf"');
+    res.setHeader('Content-Length', pdfBuffer.length);
 
+    // 5. Send the PDF file
     res.send(pdfBuffer);
-    
+
   } catch (error) {
-    console.error('An error occurred during PDF generation:', error);
-    res.status(500).json({ error: 'Failed to generate PDF from the provided HTML.' });
+    console.error('Error generating PDF:', error);
+    res.status(500).json({ error: 'An error occurred while generating the PDF.' });
   } finally {
+    // 6. Always close the browser to prevent memory leaks
     if (browser) {
-      await browser.close(); // Prevent memory leaks by closing browser
+      await browser.close();
     }
   }
 });
 
-// Root endpoint just for diagnostics
-app.get('/', (req, res) => {
-  res.send('HTML to PDF API Service is up and running. Use POST /api/generate-pdf');
-});
-
 // Start the server
-app.listen(port, () => {
-  console.log(`Server listening at http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
