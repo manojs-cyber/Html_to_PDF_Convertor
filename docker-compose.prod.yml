@@ -1,0 +1,20 @@
+services:
+  api:
+    build: .
+    image: html-to-pdf-api:production
+    container_name: html-to-pdf-api-prod
+    ports:
+      - "80:3000" # Expose on standard web port 80
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    restart: always # Automatically restart on failure or server reboot
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Puppeteer can use lots of memory, good to set limits
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
