@@ -3,6 +3,7 @@ version: '3.8'
 services:
   api:
     build: .
+    image: html-to-pdf-api
     container_name: html-to-pdf-api-container
     ports:
       - "3000:3000"
